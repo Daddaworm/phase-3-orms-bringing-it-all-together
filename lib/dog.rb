@@ -4,6 +4,7 @@ class Dog
     attr_accessor :name, :breed
     attr_reader :id
 
+    
     def initialize(id: nil, name:, breed:)
         # has a name and a breed
         # has an id that defaults to `nil` on initialization
@@ -85,15 +86,40 @@ class Dog
 
 
     def self.find_or_create_by(name:, breed:)
+        # creates an instance of a dog if it does not already exist
+        # when two dogs have the same name and different breed, it returns the correct dog
+        # when creating a new dog with the same name as persisted dogs, it returns the correct dog
         dog = DB[:conn].execute("SELECT * FROM dogs WHERE name = ? AND breed = ?", name, breed)
         if !dog.empty?
             dog_data = dog[0]
-            dog = Dog.new(dog_data[0], dog_data[1], dog_data[2])
+            dog = Dog.new(id: dog_data[0], name: dog_data[1], breed: dog_data[2])
             # binding.pry
         else
             dog = self.create(name: name, breed: breed)
         end
         dog
     end
+
+
+    def self.find_by_name(name)
+        # returns an instance of dog that matches the name from the DB
+        sql = <<-SQL
+            SELECT *
+            FROM dogs
+            WHERE name = ?
+            LIMIT 1
+        SQL
+        DB[:conn].execute(sql, name).map do |row|
+            self.new_from_db(row)
+        end.first
+    end
+
+
+    def update
+        # updates the record associated with a given instance
+        sql = "UPDATE dogs SET name = ?, breed = ? WHERE id =?"
+        DB[:conn].execute(sql, self.name, self.breed, self.id)
+    end
+
 
 end
